@@ -50,6 +50,7 @@
 - name: retrieving server ID
   command: xmllint --xpath 'string(/cruise/server/@serverId)' /etc/go/cruise-config.xml
   register: tmp_go_server_id
+  sudo: yes
   changed_when: false
 
 - name: Save server ID as a fact
@@ -58,31 +59,37 @@
 
 - name: retrieve existing cruise-config.xml
   fetch: dest="/tmp/{{ ansible_hostname }}/" src="/etc/go/cruise-config.xml" flat="yes"
+  sudo: yes
   changed_when: false
 
 - name: Check for existing pipelines
   command: xmllint --xpath 'count(//pipelines)' /etc/go/cruise-config.xml
   register: tmp_go_pipelines_count
+  sudo: yes
   changed_when: false
 
 - name: Check for existing agents
   command: xmllint --xpath 'count(//agents)' /etc/go/cruise-config.xml
   register: tmp_go_agents_count
+  sudo: yes
   changed_when: false
 
 - name: Check for existing templates
   command: xmllint --xpath 'count(//templates)' /etc/go/cruise-config.xml
   register: tmp_go_templates_count
+  sudo: yes
   changed_when: false
 
 - name: Check for existing environments
   command: xmllint --xpath 'count(//environments)' /etc/go/cruise-config.xml
   register: tmp_go_environments_count
+  sudo: yes
   changed_when: false
 
 - name: Save existing pipelines
   command: xmllint --xpath '//pipelines' /etc/go/cruise-config.xml
   register: tmp_go_pipelines_config
+  sudo: yes
   changed_when: false
   when: tmp_go_pipelines_count.stdout != "0"
 
@@ -94,6 +101,7 @@
 - name: Save existing agents
   command: xmllint --xpath '//agents' /etc/go/cruise-config.xml
   register: tmp_go_agents_config
+  sudo: yes
   changed_when: false
   when: tmp_go_agents_count.stdout != "0"
 
@@ -105,6 +113,7 @@
 - name: Save existing templates
   command: xmllint --xpath '//templates' /etc/go/cruise-config.xml
   register: tmp_go_templates_config
+  sudo: yes
   changed_when: false
   when: tmp_go_templates_count.stdout != "0"
 
@@ -116,6 +125,7 @@
 - name: Save existing environments
   command: xmllint --xpath '//environments' /etc/go/cruise-config.xml
   register: tmp_go_environments_config
+  sudo: yes
   changed_when: false
   when: tmp_go_environments_count.stdout != "0"
 
@@ -134,6 +144,7 @@
 
 - name: Checking for password file
   stat: "path={{ GOCD_PASSWDFILE_PATH }} get_md5=no"
+  sudo: yes
   register: tmp_go_passwd
 
 - name: Generating password for default admin user
@@ -143,14 +154,17 @@
 
 - name: Creating default admin user
   lineinfile: "create=yes dest={{ GOCD_PASSWDFILE_PATH }} line='{{ tmp_passfile_contents.stdout }}' group={{ GOCD_GROUP }} mode=0640 owner={{ GOCD_USER }}"
+  sudo: yes
   when: tmp_go_passwd.stat.exists == False
 
 - name: Wait for Go to start
   wait_for: port=8153 timeout=180
 
 - name: Trigger a Go configuration backup
-  uri: url=http://{{ ansible_hostname }}:8153/go/api/admin/start_backup
+  uri: url=http://{{ inventory_hostname }}:8153/go/api/admin/start_backup
      method=POST user={{ GOCD_DEFAULT_ADMIN }} password={{ GOCD_DEFAULT_PASS }}
 
 - name: Creating Go configuration file
   template: backup=no dest=/etc/go/cruise-config.xml group={{ GOCD_GROUP }} mode=0644 owner={{ GOCD_USER }} src=base-config.xml
+  sudo: yes
+
